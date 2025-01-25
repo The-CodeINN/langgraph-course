@@ -1,0 +1,9 @@
+{
+  "dockerfile_lines": [],
+  "graphs": {
+    "simple_graph": "./learn/module_1/main.py:graph"
+  },
+  "env": "./.env",
+  "python_version": "3.11",
+  "dependencies": ["."]
+}
