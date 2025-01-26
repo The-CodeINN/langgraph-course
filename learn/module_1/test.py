@@ -1,51 +1,39 @@
-from learn.config import config
+import asyncio
+from langgraph_sdk import get_client
+from langchain_core.messages import HumanMessage
 
-from pprint import pprint
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
-from langgraph.graph.message import add_messages
+URL = "http://127.0.0.1:2024"
+client = get_client(url=URL)
 
-messages = [
-    AIMessage(content="Hello, I am a bot.", name="bot"),
-]
 
-messages.extend([HumanMessage(content="Hi bot, can you tell me a joke?", name="user")])
-messages.extend(
-    [
-        AIMessage(
-            content="Sure, here is a joke: Why did the scarecrow win an award? Because he was outstanding in his field.",
-            name="bot",
+async def run_calculation(prompt: str):
+    try:
+        # Create thread
+        thread = await client.threads.create()
+        thread_id = thread["thread_id"]
+
+        # Get assistant
+        assistants = await client.assistants.search()
+        assistant_id = assistants[0]["assistant_id"]
+
+        # Create and wait for run
+        result = await client.runs.wait(
+            thread_id=thread_id,
+            assistant_id=assistant_id,
+            input={"messages": [HumanMessage(content=prompt, name="user")]},
         )
-    ]
-)
+
+        # Print results
+        if isinstance(result, dict) and "messages" in result:
+            for message in result["messages"]:
+                if hasattr(message, "content"):
+                    print(f"Response: {message.content}")
+                else:
+                    print(f"Message: {message}")
+
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
 
 
-llm = ChatOpenAI(api_key=config.openai_api_key, model="gpt-4o-mini")
-# result = llm.invoke(messages)
-
-
-def multiply(a: int, b: int) -> int:
-    """
-    Multiply two numbers together.
-
-    Args:
-        a: The first number.
-        b: The second number.
-    """
-    return a * b
-
-
-llm_with_tools = llm.bind_tools([multiply])
-
-tool_call = llm_with_tools.invoke(
-    [HumanMessage(content="What is 5 times 5?", name="user")]
-)
-
-initial_messages = [
-    HumanMessage(content="What is 5 times 5?", name="user"),
-    AIMessage(content="25", name="bot"),
-]
-
-new_messages = AIMessage(content="25", name="bot")
-test = add_messages(initial_messages, new_messages)
-print(test)
+if __name__ == "__main__":
+    asyncio.run(run_calculation("Add 3 to 4"))
